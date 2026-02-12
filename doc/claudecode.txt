@@ -1,0 +1,259 @@
+*claudecode.txt*	In-editor Claude Code chat for Neovim
+
+Author: Douglas Jordan
+License: MIT
+Homepage: https://github.com/douglasjordan2/claudecode.nvim
+
+==============================================================================
+CONTENTS						*claudecode-contents*
+
+    1. Introduction ......................... |claudecode-introduction|
+    2. Requirements ......................... |claudecode-requirements|
+    3. Installation ......................... |claudecode-installation|
+    4. Configuration ........................ |claudecode-configuration|
+    5. Commands ............................. |claudecode-commands|
+    6. Keymaps .............................. |claudecode-keymaps|
+    7. API .................................. |claudecode-api|
+    8. Troubleshooting ...................... |claudecode-troubleshooting|
+
+==============================================================================
+1. INTRODUCTION					*claudecode-introduction*
+
+claudecode.nvim provides an in-editor chat interface to Claude Code via a
+Rust bridge binary. It spawns the `claude` CLI, streams its JSON output, and
+renders the conversation in a Neovim split or floating window.
+
+==============================================================================
+2. REQUIREMENTS					*claudecode-requirements*
+
+- Neovim 0.10+
+- Claude CLI (`claude` on your PATH)
+- Rust toolchain (only for building from source)
+
+==============================================================================
+3. INSTALLATION					*claudecode-installation*
+
+With lazy.nvim: >lua
+    {
+      "douglasjordan2/claudecode.nvim",
+      build = function()
+        require("claudecode.build").install()
+      end,
+      config = function()
+        require("claudecode").setup()
+      end,
+    }
+<
+
+With packer.nvim: >lua
+    use {
+      "douglasjordan2/claudecode.nvim",
+      run = function()
+        require("claudecode.build").install()
+      end,
+      config = function()
+        require("claudecode").setup()
+      end,
+    }
+<
+
+==============================================================================
+4. CONFIGURATION				*claudecode-configuration*
+
+Call `require("claudecode").setup(opts)` with a table of options.
+
+						*claudecode-config-ui*
+ui.mode ~
+    Window mode. `"split"` or `"float"`. Default: `"split"`
+
+ui.split_width ~
+    Width of the split panel. Default: `80`
+
+ui.float_width ~
+    Float width (0-1 = fraction). Default: `0.7`
+
+ui.float_height ~
+    Float height (0-1 = fraction). Default: `0.8`
+
+ui.border ~
+    Border style for float windows. Default: `"rounded"`
+
+ui.input_min_height ~
+    Minimum height of the input box. Default: `2`
+
+ui.input_max_height ~
+    Maximum height of the input box. Default: `10`
+
+						*claudecode-config-keymaps*
+keymaps.toggle ~
+    Toggle chat window. Default: `<leader>cc`
+
+keymaps.send ~
+    Focus input. Default: `<leader>cs`
+
+keymaps.context ~
+    Send with file context. Default: `<leader>cx`
+
+keymaps.visual ~
+    Send visual selection. Default: `<leader>cv`
+
+keymaps.abort ~
+    Abort request. Default: `<leader>ca`
+
+keymaps.accept_diff ~
+    Accept diff. Default: `<leader>cy`
+
+keymaps.reject_diff ~
+    Reject diff. Default: `<leader>cn`
+
+keymaps.sessions ~
+    Session picker. Default: `<leader>cl`
+
+						*claudecode-config-truncation*
+truncation.tool_result ~
+    Max display length for tool results. Default: `120`
+
+truncation.command ~
+    Max display length for commands. Default: `60`
+
+						*claudecode-config-other*
+model ~
+    Override Claude model. Default: `nil`
+
+allowed_tools ~
+    Restrict available tools. Default: `nil`
+
+append_system_prompt ~
+    Append to system prompt. Default: `nil`
+
+permission_mode ~
+    Permission mode for claude CLI. Default: `nil`
+
+binary_path ~
+    Custom path to bridge binary. Default: `nil`
+
+==============================================================================
+5. COMMANDS					*claudecode-commands*
+
+						*:Claude*
+:Claude [message]
+    Without arguments, toggles the chat window. With arguments, sends the
+    message to Claude.
+
+						*:ClaudeChat*
+:ClaudeChat
+    Opens the chat window and focuses the input buffer.
+
+						*:ClaudeAbort*
+:ClaudeAbort
+    Aborts the active Claude request.
+
+						*:ClaudeSessions*
+:ClaudeSessions
+    Lists previous sessions for resuming.
+
+						*:ClaudeStatus*
+:ClaudeStatus
+    Shows bridge process status.
+
+						*:ClaudeNew*
+:ClaudeNew
+    Starts a new session (clears session state).
+
+==============================================================================
+6. KEYMAPS					*claudecode-keymaps*
+
+Global keymaps (normal mode):
+
+    `<leader>cc`    Toggle chat window
+    `<leader>cs`    Focus chat input
+    `<leader>cx`    Send with file context
+    `<leader>ca`    Abort current request
+    `<leader>cl`    Session picker
+
+Visual mode:
+
+    `<leader>cv`    Send selection to Claude
+
+Chat input buffer:
+
+    `<C-s>`         Send message (insert mode)
+    `<CR>`          Send message (normal mode)
+    `q`             Close chat (normal mode)
+
+Diff viewer:
+
+    `<leader>cy`    Accept proposed edit
+    `<leader>cn`    Reject proposed edit
+
+==============================================================================
+7. API						*claudecode-api*
+
+						*claudecode.setup()*
+require("claudecode").setup({opts})
+    Initialize the plugin with optional configuration.
+
+						*claudecode.config*
+require("claudecode").config
+    The active configuration table (read-only after setup).
+
+require("claudecode.chat").send({prompt}, {context})
+    Send a prompt with optional context string.
+
+require("claudecode.chat").abort()
+    Abort the active request.
+
+require("claudecode.chat").new_session()
+    Start a new session.
+
+require("claudecode.chat").resume({session_id})
+    Resume a previous session.
+
+require("claudecode.context").current_file()
+    Returns the current file as a formatted context string.
+
+require("claudecode.context").selection()
+    Returns the visual selection as a formatted context string.
+
+require("claudecode.context").diagnostics()
+    Returns buffer diagnostics as a formatted context string.
+
+require("claudecode.context").gather({file}, {selection}, {diagnostics})
+    Gathers multiple context types into one string.
+
+require("claudecode.ui").open({mode})
+    Open the chat UI. Mode is `"split"` or `"float"`.
+
+require("claudecode.ui").close()
+    Close the chat UI.
+
+require("claudecode.ui").toggle()
+    Toggle the chat UI.
+
+require("claudecode.bridge").start({opts})
+    Start the bridge process.
+
+require("claudecode.bridge").stop()
+    Stop the bridge process.
+
+require("claudecode.bridge").is_running()
+    Returns true if the bridge is running.
+
+==============================================================================
+8. TROUBLESHOOTING				*claudecode-troubleshooting*
+
+Run `:checkhealth claudecode` to diagnose common issues.
+
+Bridge binary not found ~
+    Run `:lua require('claudecode.build').install()` or build manually:
+    `cd rust && cargo build --release`
+
+claude not on PATH ~
+    Install the Claude CLI and ensure it is accessible.
+
+No output after sending ~
+    Check `:ClaudeStatus` to verify the bridge is running. Stderr output
+    from the CLI is forwarded as error events in the chat buffer.
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:

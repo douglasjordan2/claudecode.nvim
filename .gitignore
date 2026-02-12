@@ -1,0 +1,5 @@
+rust/target/
+lua/claudecode/bin/
+*.so
+*.dylib
+*.dll
