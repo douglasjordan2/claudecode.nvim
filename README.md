@@ -2,6 +2,10 @@
 
 A Neovim plugin that provides an in-editor chat interface to [Claude Code](https://docs.anthropic.com/en/docs/claude-code) via a Rust bridge binary.
 
+> **No API key required.** This plugin runs through the Claude Code CLI, which uses
+> your existing Claude Pro or Max subscription. Unlike API-based plugins, there are
+> no per-token costs or separate billing — just your monthly plan.
+
 <!-- Screenshot/demo placeholder -->
 
 ## Requirements

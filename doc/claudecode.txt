@@ -23,6 +23,10 @@ claudecode.nvim provides an in-editor chat interface to Claude Code via a
 Rust bridge binary. It spawns the `claude` CLI, streams its JSON output, and
 renders the conversation in a Neovim split or floating window.
 
+No API key required. This plugin runs through the Claude Code CLI, which
+uses your existing Claude Pro or Max subscription. Unlike API-based plugins,
+there are no per-token costs or separate billing — just your monthly plan.
+
 ==============================================================================
 2. REQUIREMENTS					*claudecode-requirements*
 
