@@ -138,7 +138,7 @@ async fn main() {
                     let chat_params = protocol::ChatParams {
                         prompt: params.prompt,
                         cwd: None,
-                        context: None,
+                        context: params.context,
                         model: None,
                         allowed_tools: None,
                         append_system_prompt: None,

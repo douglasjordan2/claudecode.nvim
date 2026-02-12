@@ -159,7 +159,7 @@ function M.send(prompt, context)
   if current_session_id then
     bridge.send({
       method = "continue",
-      params = { prompt = prompt },
+      params = { prompt = prompt, context = context },
     })
   else
     bridge.send({

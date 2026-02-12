@@ -38,6 +38,8 @@ pub struct ResumeParams {
 #[derive(Debug, Deserialize)]
 pub struct ContinueParams {
     pub prompt: String,
+    #[serde(default)]
+    pub context: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
