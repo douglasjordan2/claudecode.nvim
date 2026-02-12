@@ -12,7 +12,7 @@ A Neovim plugin that provides an in-editor chat interface to [Claude Code](https
 
 - Neovim 0.10+
 - [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) (`claude` must be on your PATH)
-- Rust toolchain (only if building from source)
+- Rust toolchain (only if no prebuilt binary is available for your platform)
 
 ## Installation
 

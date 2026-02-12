@@ -32,7 +32,7 @@ there are no per-token costs or separate billing — just your monthly plan.
 
 - Neovim 0.10+
 - Claude CLI (`claude` on your PATH)
-- Rust toolchain (only for building from source)
+- Rust toolchain (only if no prebuilt binary is available for your platform)
 
 ==============================================================================
 3. INSTALLATION					*claudecode-installation*
