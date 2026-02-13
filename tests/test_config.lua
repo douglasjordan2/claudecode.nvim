@@ -76,7 +76,7 @@ local function test_default_config_values()
     model = nil,
     allowed_tools = nil,
     append_system_prompt = nil,
-    permission_mode = nil,
+    permission_mode = "acceptEdits",
     binary_path = nil,
   }
 
