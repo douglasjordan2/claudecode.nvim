@@ -13,7 +13,8 @@ local function get_platform()
 end
 
 local function get_plugin_dir()
-  return vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":h")
+  local source = debug.getinfo(1, "S").source:sub(2)
+  return vim.fn.fnamemodify(source, ":h:h:h")
 end
 
 function M.install()
