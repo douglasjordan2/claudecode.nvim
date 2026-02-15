@@ -154,6 +154,10 @@ function M.send(prompt, context)
     end
   end
 
+  if not ui.is_open() then
+    ui.open()
+  end
+
   append_to_chat({ "", "> " .. prompt:gsub("\n", "\n> "), "" })
 
   if current_session_id then
