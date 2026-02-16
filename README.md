@@ -1,17 +1,41 @@
 # claudecode.nvim
 
-A Neovim plugin that provides an in-editor chat interface to [Claude Code](https://docs.anthropic.com/en/docs/claude-code) via a Rust bridge binary.
+**Cursor-like AI coding in Neovim — powered by your Claude Code subscription.**
 
-> **No API key required.** This plugin runs through the Claude Code CLI, which uses
-> your existing Claude Pro or Max subscription. Unlike API-based plugins, there are
-> no per-token costs or separate billing — just your monthly plan.
+Use Claude as an AI pair programmer directly inside Neovim. Chat, send code selections, review inline diffs, and let Claude edit your files — all without leaving your editor. No API key needed, no per-token billing, fully ToS-compliant.
+
+> If you have a [Claude Pro or Max](https://claude.ai/pricing) subscription with
+> [Claude Code](https://docs.anthropic.com/en/docs/claude-code) enabled, you
+> already have everything you need. This plugin talks to the official `claude` CLI —
+> the same way Claude Code works in VS Code and JetBrains.
 
 <!-- Screenshot/demo placeholder -->
+
+## Why claudecode.nvim?
+
+| | Copilot | Cursor | API plugins | **claudecode.nvim** |
+|---|---------|--------|-------------|---------------------|
+| Editor | VS Code, Neovim, etc. | Cursor (fork) | Various | **Neovim** |
+| Billing | Separate subscription | Separate subscription | Pay-per-token API costs | **Your existing Claude plan** |
+| Inline diffs | Yes | Yes | Varies | **Yes** |
+| Chat with context | Yes | Yes | Varies | **Yes** |
+| Session persistence | No | Yes | Varies | **Yes** |
+| ToS-compliant | Yes | Yes | Yes | **Yes** |
+| Works in your terminal | No | No | Varies | **Yes** |
+
+### What you get
+
+- **In-editor chat** — split or floating window, rendered markdown, tool use visibility
+- **Inline diff viewer** — Claude proposes edits, you accept or reject per-hunk, just like Cursor
+- **Code context** — send the current file, a visual selection, or diagnostics as context
+- **Session management** — resume previous conversations, start new ones
+- **Non-blocking** — a lightweight Rust bridge keeps your editor responsive while Claude thinks
+- **Zero config billing** — uses your Claude Pro/Max subscription through the official CLI
 
 ## Requirements
 
 - Neovim 0.10+
-- [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) (`claude` must be on your PATH)
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) (`claude` must be on your PATH)
 - Rust toolchain (only if no prebuilt binary is available for your platform)
 
 ## Installation
@@ -140,7 +164,7 @@ require("claudecode").setup({
 | `<leader>cy`     | Accept proposed edit       |
 | `<leader>cn`     | Reject proposed edit       |
 
-## Architecture
+## How It Works
 
 ```
 Neovim (Lua) <--stdin/stdout JSON-lines--> claudecode-bridge (Rust) <--spawns--> claude CLI
@@ -148,15 +172,7 @@ Neovim (Lua) <--stdin/stdout JSON-lines--> claudecode-bridge (Rust) <--spawns-->
 
 The plugin communicates with a Rust bridge binary over stdin/stdout using JSON-lines protocol. The bridge spawns the `claude` CLI process, streams its output, and forwards structured events back to Neovim. This architecture keeps the Lua side lightweight and avoids blocking the editor during long-running requests.
 
-Key modules:
-- `lua/claudecode/init.lua` - setup, config, user commands
-- `lua/claudecode/bridge.lua` - manages the bridge subprocess
-- `lua/claudecode/chat.lua` - event handling and chat rendering
-- `lua/claudecode/ui.lua` - split/float window management
-- `lua/claudecode/context.lua` - file/selection/diagnostics context
-- `lua/claudecode/diff.lua` - diff viewer for Edit tool
-- `lua/claudecode/keymaps.lua` - keymap registration
-- `lua/claudecode/build.lua` - binary download/build
+Because it uses the official `claude` CLI under the hood, this plugin is fully compliant with Anthropic's Terms of Service — it's the same interface that powers Claude Code in VS Code and JetBrains, just wired into Neovim.
 
 ## Troubleshooting
 
