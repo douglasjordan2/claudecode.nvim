@@ -87,6 +87,8 @@ local function create_input_buf()
   vim.bo[input_buf].bufhidden = "hide"
   vim.api.nvim_buf_set_name(input_buf, "claudecode://input")
 
+  vim.keymap.set("i", "<CR>", send_input, { buffer = input_buf, desc = "Send to Claude" })
+  vim.keymap.set("i", "<S-CR>", "<CR>", { buffer = input_buf, desc = "New line" })
   vim.keymap.set("i", "<C-s>", send_input, { buffer = input_buf, desc = "Send to Claude" })
   vim.keymap.set("n", "<CR>", send_input, { buffer = input_buf, desc = "Send to Claude" })
   vim.keymap.set("n", "q", function()
