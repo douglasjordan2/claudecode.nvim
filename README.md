@@ -15,7 +15,7 @@ Use Claude as an AI pair programmer directly inside Neovim. Chat, send code sele
 
 | | Copilot | Cursor | API plugins | **claudecode.nvim** |
 |---|---------|--------|-------------|---------------------|
-| Editor | VS Code, Neovim, etc. | Cursor (fork) | Various | **Neovim** |
+| Editor | VS Code, Neovim, etc. | Cursor | Various | **Neovim** |
 | Billing | Separate subscription | Separate subscription | Pay-per-token API costs | **Your existing Claude plan** |
 | Inline diffs | Yes | Yes | Varies | **Yes** |
 | Chat with context | Yes | Yes | Varies | **Yes** |
