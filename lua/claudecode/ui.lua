@@ -4,6 +4,8 @@ local chat_buf = nil
 local chat_win = nil
 local input_buf = nil
 local input_win = nil
+local closing = false
+local exiting_nvim = false
 
 local function get_config()
   return require("claudecode").config.ui
@@ -29,6 +31,11 @@ local function create_chat_buf()
   vim.bo[chat_buf].bufhidden = "hide"
   vim.bo[chat_buf].modifiable = false
   vim.api.nvim_buf_set_name(chat_buf, "claudecode://chat")
+
+  vim.keymap.set("n", "q", function()
+    local toggle_key = require("claudecode").config.keymaps.toggle
+    vim.notify("[claudecode] Use " .. toggle_key .. " to close the panel", vim.log.levels.WARN)
+  end, { buffer = chat_buf, desc = "Claude panel close hint" })
 
   return chat_buf
 end
@@ -83,8 +90,9 @@ local function create_input_buf()
   vim.keymap.set("i", "<C-s>", send_input, { buffer = input_buf, desc = "Send to Claude" })
   vim.keymap.set("n", "<CR>", send_input, { buffer = input_buf, desc = "Send to Claude" })
   vim.keymap.set("n", "q", function()
-    M.close()
-  end, { buffer = input_buf, desc = "Close Claude chat" })
+    local toggle_key = require("claudecode").config.keymaps.toggle
+    vim.notify("[claudecode] Use " .. toggle_key .. " to close the panel", vim.log.levels.WARN)
+  end, { buffer = input_buf, desc = "Claude panel close hint" })
 
   vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
     buffer = input_buf,
@@ -173,12 +181,57 @@ function M.open(mode)
   apply_win_opts(chat_win)
   apply_win_opts(input_win)
 
+  local augroup = vim.api.nvim_create_augroup("claudecode_panel", { clear = true })
+
+  vim.api.nvim_create_autocmd("VimLeavePre", {
+    group = augroup,
+    callback = function()
+      exiting_nvim = true
+    end,
+  })
+
+  vim.api.nvim_create_autocmd("WinClosed", {
+    group = augroup,
+    callback = function(ev)
+      if closing or exiting_nvim then
+        return
+      end
+      local win = tonumber(ev.match)
+      if win ~= chat_win and win ~= input_win then
+        return
+      end
+      vim.schedule(function()
+        if exiting_nvim then
+          return
+        end
+        closing = true
+        if win == chat_win and input_win and vim.api.nvim_win_is_valid(input_win) then
+          vim.api.nvim_win_close(input_win, true)
+        elseif win == input_win and chat_win and vim.api.nvim_win_is_valid(chat_win) then
+          vim.api.nvim_win_close(chat_win, true)
+        end
+        chat_win = nil
+        input_win = nil
+        closing = false
+        M.open()
+        vim.cmd("stopinsert")
+        local toggle_key = require("claudecode").config.keymaps.toggle
+        vim.notify("[claudecode] Use " .. toggle_key .. " to close the panel", vim.log.levels.WARN)
+      end)
+    end,
+  })
+
   vim.api.nvim_set_current_win(input_win)
   vim.api.nvim_win_set_cursor(input_win, { 1, 0 })
   vim.cmd("startinsert")
 end
 
 function M.close()
+  if closing then
+    return
+  end
+  closing = true
+  vim.api.nvim_create_augroup("claudecode_panel", { clear = true })
   if input_win and vim.api.nvim_win_is_valid(input_win) then
     vim.api.nvim_win_close(input_win, true)
   end
@@ -187,6 +240,7 @@ function M.close()
   end
   chat_win = nil
   input_win = nil
+  closing = false
 end
 
 function M.toggle()

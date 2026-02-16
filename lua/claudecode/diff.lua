@@ -132,6 +132,8 @@ function M.show(tool_use_id, input)
     return
   end
 
+  vim.cmd("stopinsert")
+
   local file_path = input.file_path
   local old_string = input.old_string or ""
   local new_string = input.new_string or ""
