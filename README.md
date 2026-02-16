@@ -13,15 +13,16 @@ Use Claude as an AI pair programmer directly inside Neovim. Chat, send code sele
 
 ## Why claudecode.nvim?
 
-| | Copilot | Cursor | API plugins | **claudecode.nvim** |
-|---|---------|--------|-------------|---------------------|
-| Editor | VS Code, Neovim, etc. | Cursor | Various | **Neovim** |
-| Billing | Separate subscription | Separate subscription | Pay-per-token API costs | **Your existing Claude plan** |
-| Inline diffs | Yes | Yes | Varies | **Yes** |
-| Chat with context | Yes | Yes | Varies | **Yes** |
-| Session persistence | No | Yes | Varies | **Yes** |
-| ToS-compliant | Yes | Yes | Yes | **Yes** |
-| Works in your terminal | No | No | Varies | **Yes** |
+| | Copilot | Cursor | Antigravity | API plugins | **claudecode.nvim** |
+|---|---------|--------|-------------|-------------|---------------------|
+| Editor | VS Code, Neovim, etc. | Cursor (VS Code fork) | Antigravity | Various | **Neovim** |
+| Inline diffs | Yes | Yes | Yes | Varies | **Yes** |
+| Chat with context | Yes | Yes | Yes | Varies | **Yes** |
+| Session persistence | No | Yes | Yes | Varies | **Yes** |
+| ToS-compliant | Yes | Yes | Yes | Yes | **Yes** |
+| Works in your terminal | No | No | No | Varies | **Yes** |
+| **Uses your existing Claude plan?** | **No** | **No** | **No** | **No** | **YES** |
+| **NOT VS Code?** | **No** | **No** | **No** | **Varies** | **YES** |
 
 ### What you get
 
