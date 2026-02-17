@@ -76,7 +76,7 @@ Use Claude as an AI pair programmer directly inside Neovim. Chat, send code sele
         require("lualine").setup({
           sections = {
             lualine_x = {
-              require("claudecode").statusline,
+              "claudecode",
               "encoding", "fileformat", "filetype",
             },
           },
@@ -227,13 +227,18 @@ require("claudecode").setup({
 
 ## Statusline
 
-Add Claude's state to your statusline. Works with lualine or any custom statusline.
+Add Claude's state to your statusline with animated spinner and state-based colors.
 
-### lualine
+### lualine (recommended)
 
 ```lua
-lualine_x = { require("claudecode").statusline }
+lualine_x = { "claudecode", "encoding", "fileformat", "filetype" }
 ```
+
+The lualine component provides:
+- Animated braille spinner while Claude is active
+- Color-coded state using your colorscheme's diagnostic highlights (yellow for thinking, green for streaming, blue for tool_use, red for error)
+- Auto-refresh during active states for smooth animation
 
 ### Custom statusline
 
@@ -241,7 +246,7 @@ lualine_x = { require("claudecode").statusline }
 vim.o.statusline = "%{v:lua.require('claudecode').statusline()}"
 ```
 
-Shows the current state with a nerd font icon: idle, thinking, streaming, tool_use, or error. Customize icons via `statusline.icons` in config.
+The basic `statusline()` function returns a formatted string with icon and state label. Customize icons via `statusline.icons` in config.
 
 ## How It Works
 
@@ -262,6 +267,10 @@ Common problems:
 - **Bridge binary not found**: Run `:lua require('claudecode.build').install()` or build manually with `cd rust && cargo build --release`
 - **`claude` not on PATH**: Install the Claude CLI and ensure it's accessible
 - **No output after sending**: Check `:ClaudeStatus` to verify the bridge is running. Check stderr output in the chat buffer for errors from the CLI.
+
+## Contributing
+
+**WANTED: better screenshots!** The current screenshots are functional but rough. If you have a nice terminal setup and want to contribute polished screenshots or GIFs showing off the features, PRs are very welcome.
 
 ## License
 
