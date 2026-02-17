@@ -9,7 +9,7 @@ Use Claude as an AI pair programmer directly inside Neovim. Chat, send code sele
 > already have everything you need. This plugin talks to the official `claude` CLI —
 > the same way Claude Code works in VS Code and JetBrains.
 
-<!-- Screenshot/demo placeholder -->
+![Chat split mode — code on the left, Claude on the right](screenshots/chat-split.png)
 
 ## Why claudecode.nvim?
 
@@ -27,9 +27,19 @@ Use Claude as an AI pair programmer directly inside Neovim. Chat, send code sele
 ### What you get
 
 - **In-editor chat** — split or floating window, rendered markdown, tool use visibility
+
+  ![Float mode](screenshots/chat-float.png)
 - **Inline diff viewer** — Claude proposes edits, you accept or reject per-hunk, just like Cursor
+
+  ![Inline diff viewer](screenshots/inline-diff.png)
 - **Code context** — send the current file, a visual selection, or diagnostics as context
+
+  ![Visual selection context](screenshots/visual-selection.png)
+
+  ![Diagnostics context](screenshots/diagnostics.png)
 - **Session management** — resume previous conversations, start new ones
+
+  ![Session picker](screenshots/session-picker.png)
 - **Non-blocking** — a lightweight Rust bridge keeps your editor responsive while Claude thinks
 - **Zero config billing** — uses your Claude Pro/Max subscription through the official CLI
 

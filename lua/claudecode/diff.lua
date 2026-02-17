@@ -133,6 +133,11 @@ function M.show(tool_use_id, input)
 
   vim.cmd("stopinsert")
 
+  local ui = require("claudecode.ui")
+  if ui.is_open() and require("claudecode").config.ui.mode == "float" then
+    ui.close()
+  end
+
   local file_path = input.file_path
   local old_string = input.old_string or ""
   local new_string = input.new_string or ""
