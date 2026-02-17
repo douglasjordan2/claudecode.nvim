@@ -33,9 +33,8 @@ local function create_chat_buf()
   vim.api.nvim_buf_set_name(chat_buf, "claudecode://chat")
 
   vim.keymap.set("n", "q", function()
-    local toggle_key = require("claudecode").config.keymaps.toggle
-    vim.notify("[claudecode] Use " .. toggle_key .. " to close the panel", vim.log.levels.WARN)
-  end, { buffer = chat_buf, desc = "Claude panel close hint" })
+    M.close()
+  end, { buffer = chat_buf, desc = "Close Claude chat" })
 
   return chat_buf
 end
@@ -92,9 +91,8 @@ local function create_input_buf()
   vim.keymap.set("i", "<C-s>", send_input, { buffer = input_buf, desc = "Send to Claude" })
   vim.keymap.set("n", "<CR>", send_input, { buffer = input_buf, desc = "Send to Claude" })
   vim.keymap.set("n", "q", function()
-    local toggle_key = require("claudecode").config.keymaps.toggle
-    vim.notify("[claudecode] Use " .. toggle_key .. " to close the panel", vim.log.levels.WARN)
-  end, { buffer = input_buf, desc = "Claude panel close hint" })
+    M.close()
+  end, { buffer = input_buf, desc = "Close Claude chat" })
 
   vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
     buffer = input_buf,
@@ -243,6 +241,7 @@ function M.close()
   chat_win = nil
   input_win = nil
   closing = false
+  require("claudecode.chat").end_session()
 end
 
 function M.toggle()

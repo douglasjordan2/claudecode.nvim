@@ -7,6 +7,8 @@ local ns = vim.api.nvim_create_namespace("claudecode_chat")
 local streaming = false
 local stream_line = nil
 local current_session_id = nil
+local session_history = {}
+local pending_prompt = nil
 
 local function get_buf()
   return ui.get_chat_buf()
@@ -60,6 +62,18 @@ local function on_event(data)
 
   if evt == "init" then
     current_session_id = data.session_id
+    if current_session_id and pending_prompt then
+      local summary = pending_prompt:gsub("\n", " ")
+      if #summary > 80 then
+        summary = summary:sub(1, 77) .. "..."
+      end
+      table.insert(session_history, {
+        id = current_session_id,
+        summary = summary,
+        timestamp = os.time(),
+      })
+      pending_prompt = nil
+    end
     if not current_session_id then
       append_to_chat({
         "",
@@ -139,7 +153,11 @@ local function on_event(data)
   elseif evt == "error" then
     streaming = false
     stream_line = nil
-    append_to_chat({ "", "[ERROR] " .. (data.message or "Unknown error"), "" })
+    local msg = data.message or "Unknown error"
+    if msg:match("Bridge process exited") or msg:match("No active session") then
+      current_session_id = nil
+    end
+    append_to_chat({ "", "[ERROR] " .. msg, "" })
   end
 end
 
@@ -166,6 +184,7 @@ function M.send(prompt, context)
       params = { prompt = prompt, context = context },
     })
   else
+    pending_prompt = prompt
     bridge.send({
       method = "chat",
       params = {
@@ -214,6 +233,20 @@ end
 function M.new_session()
   current_session_id = nil
   append_to_chat({ "", "=== New Session ===", "" })
+end
+
+function M.end_session()
+  current_session_id = nil
+  streaming = false
+  stream_line = nil
+  local b = get_buf()
+  vim.bo[b].modifiable = true
+  vim.api.nvim_buf_set_lines(b, 0, -1, false, { "" })
+  vim.bo[b].modifiable = false
+end
+
+function M.get_session_history()
+  return session_history
 end
 
 function M.abort()

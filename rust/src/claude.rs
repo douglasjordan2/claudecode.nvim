@@ -52,6 +52,9 @@ impl ClaudeProcess {
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
 
+        #[cfg(unix)]
+        cmd.process_group(0);
+
         let mut child = cmd.spawn().map_err(|e| format!("Failed to spawn claude: {}", e))?;
 
         let stdout = child.stdout.take().ok_or("No stdout")?;

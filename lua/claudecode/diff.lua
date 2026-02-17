@@ -22,7 +22,7 @@ local function compute_hunks(orig_text, mod_text)
   return vim.diff(orig_text, mod_text, { result_type = "indices" })
 end
 
-local function render_inline(bufnr, hunks, orig_lines)
+local function render_inline(bufnr, hunks, orig_lines, mod_lines)
   local extmark_ids = {}
   local line_count = vim.api.nvim_buf_line_count(bufnr)
 
@@ -30,41 +30,40 @@ local function render_inline(bufnr, hunks, orig_lines)
     local start_a, count_a, start_b, count_b = hunk[1], hunk[2], hunk[3], hunk[4]
 
     if count_a > 0 then
+      for i = 0, count_a - 1 do
+        local row = start_a - 1 + i
+        if row < line_count then
+          local id = vim.api.nvim_buf_set_extmark(bufnr, ns, row, 0, {
+            line_hl_group = "ClaudeCodeDiffDelete",
+          })
+          table.insert(extmark_ids, id)
+        end
+      end
+    end
+
+    if count_b > 0 then
       local virt_lines = {}
-      for i = start_a, start_a + count_a - 1 do
-        table.insert(virt_lines, { { orig_lines[i] or "", "ClaudeCodeDiffDelete" } })
+      for i = start_b, start_b + count_b - 1 do
+        table.insert(virt_lines, { { mod_lines[i] or "", "ClaudeCodeDiffAdd" } })
       end
 
-      local anchor_row, above
-      if count_b > 0 then
-        anchor_row = start_b - 1
-        above = true
-      elseif start_b == 0 then
-        anchor_row = 0
-        above = true
-      elseif start_b < line_count then
-        anchor_row = start_b
-        above = true
+      local anchor_row
+      if count_a > 0 then
+        anchor_row = start_a - 1 + count_a - 1
+      elseif start_a > 0 then
+        anchor_row = start_a - 1
       else
+        anchor_row = 0
+      end
+      if anchor_row >= line_count then
         anchor_row = line_count - 1
-        above = false
       end
 
       local id = vim.api.nvim_buf_set_extmark(bufnr, ns, anchor_row, 0, {
         virt_lines = virt_lines,
-        virt_lines_above = above,
+        virt_lines_above = false,
       })
       table.insert(extmark_ids, id)
-    end
-
-    if count_b > 0 then
-      for i = 0, count_b - 1 do
-        local row = start_b - 1 + i
-        local id = vim.api.nvim_buf_set_extmark(bufnr, ns, row, 0, {
-          line_hl_group = "ClaudeCodeDiffAdd",
-        })
-        table.insert(extmark_ids, id)
-      end
     end
   end
 
@@ -82,10 +81,10 @@ local function render_hint(bufnr, hunks)
 
   local first_hunk = hunks[1]
   local hint_row
-  if first_hunk[4] > 0 then
-    hint_row = first_hunk[3] - 1
-  elseif first_hunk[3] > 0 then
-    hint_row = first_hunk[3] - 1
+  if first_hunk[2] > 0 then
+    hint_row = first_hunk[1] - 1
+  elseif first_hunk[1] > 0 then
+    hint_row = first_hunk[1] - 1
   else
     hint_row = 0
   end
@@ -185,11 +184,7 @@ function M.show(tool_use_id, input)
     return
   end
 
-  vim.bo[bufnr].modifiable = true
-  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, modified_lines)
-  vim.bo[bufnr].modifiable = false
-
-  local extmark_ids = render_inline(bufnr, hunks, original_lines)
+  local extmark_ids = render_inline(bufnr, hunks, original_lines, modified_lines)
   local hint_id = render_hint(bufnr, hunks)
   if hint_id then
     table.insert(extmark_ids, hint_id)
@@ -219,6 +214,27 @@ function M.show(tool_use_id, input)
     modified_lines = modified_lines,
     extmark_ids = extmark_ids,
   }
+
+  vim.api.nvim_create_autocmd("BufWritePre", {
+    buffer = bufnr,
+    callback = function()
+      if file_has_pending_diff(file_path) then
+        vim.notify("[claudecode] Accept or reject the diff before saving", vim.log.levels.WARN)
+        return true
+      end
+    end,
+  })
+
+  vim.api.nvim_create_autocmd("BufUnload", {
+    buffer = bufnr,
+    callback = function()
+      for id, diff in pairs(pending_diffs) do
+        if diff.bufnr == bufnr then
+          pending_diffs[id] = nil
+        end
+      end
+    end,
+  })
 end
 
 function M.accept(tool_use_id)
@@ -233,12 +249,13 @@ function M.accept(tool_use_id)
     return
   end
 
-  vim.bo[diff.bufnr].modifiable = true
-  vim.fn.writefile(diff.modified_lines, diff.file_path)
-  vim.bo[diff.bufnr].modified = false
-
   clear_decorations(tool_use_id)
   remove_buffer_keymaps(tool_use_id)
+
+  vim.bo[diff.bufnr].modifiable = true
+  vim.api.nvim_buf_set_lines(diff.bufnr, 0, -1, false, diff.modified_lines)
+  vim.bo[diff.bufnr].modified = false
+
   pending_diffs[tool_use_id] = nil
 
   vim.notify("[claudecode] Accepted edit to " .. diff.file_path)
@@ -255,12 +272,12 @@ function M.reject(tool_use_id)
     return
   end
 
-  vim.bo[diff.bufnr].modifiable = true
-  vim.api.nvim_buf_set_lines(diff.bufnr, 0, -1, false, diff.original_lines)
-  vim.bo[diff.bufnr].modified = false
-
   clear_decorations(tool_use_id)
   remove_buffer_keymaps(tool_use_id)
+
+  vim.fn.writefile(diff.original_lines, diff.file_path)
+  vim.bo[diff.bufnr].modified = false
+
   pending_diffs[tool_use_id] = nil
 
   vim.notify("[claudecode] Rejected edit to " .. diff.file_path)

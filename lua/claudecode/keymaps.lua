@@ -23,10 +23,24 @@ function M.setup(config)
     end)
   end, { desc = "Claude: Send with context" })
 
+  local sel_ns = vim.api.nvim_create_namespace("claudecode_selection")
+
   vim.keymap.set("v", km.visual, function()
     vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "nx", false)
+    local bufnr = vim.api.nvim_get_current_buf()
     local ctx = context.selection()
+
+    local start_line = vim.fn.getpos("'<")[2] - 1
+    local end_line = vim.fn.getpos("'>")[2]
+    for row = start_line, end_line - 1 do
+      vim.api.nvim_buf_set_extmark(bufnr, sel_ns, row, 0, {
+        line_hl_group = "Visual",
+        end_row = row + 1,
+      })
+    end
+
     vim.ui.input({ prompt = "Claude (selection)> " }, function(input)
+      vim.api.nvim_buf_clear_namespace(bufnr, sel_ns, 0, -1)
       if input and input ~= "" then
         chat.send(input, ctx)
       end
@@ -43,27 +57,23 @@ function M.setup(config)
 end
 
 function M.session_picker()
-  local sessions = {}
-  local session_dir = vim.fn.expand("~/.claude/sessions")
-  if vim.fn.isdirectory(session_dir) == 0 then
-    vim.notify("[claudecode] No sessions directory found", vim.log.levels.INFO)
+  local history = require("claudecode.chat").get_session_history()
+  if #history == 0 then
+    vim.notify("[claudecode] No sessions in this Neovim session", vim.log.levels.INFO)
     return
   end
 
-  local files = vim.fn.glob(session_dir .. "/*.json", false, true)
-  for _, f in ipairs(files) do
-    local name = vim.fn.fnamemodify(f, ":t:r")
-    table.insert(sessions, name)
+  local labels = {}
+  for i = #history, 1, -1 do
+    local s = history[i]
+    local time_str = os.date("%H:%M", s.timestamp)
+    table.insert(labels, s.summary .. "  [" .. time_str .. "]")
   end
 
-  if #sessions == 0 then
-    vim.notify("[claudecode] No sessions found", vim.log.levels.INFO)
-    return
-  end
-
-  vim.ui.select(sessions, { prompt = "Resume session:" }, function(choice)
-    if choice then
-      require("claudecode.chat").resume(choice)
+  vim.ui.select(labels, { prompt = "Resume session:" }, function(_, idx)
+    if idx then
+      local s = history[#history - idx + 1]
+      require("claudecode.chat").resume(s.id)
     end
   end)
 end

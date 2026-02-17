@@ -12,21 +12,16 @@ use tokio::task::JoinHandle;
 
 fn spawn_event_forwarder(
     mut rx: mpsc::UnboundedReceiver<Event>,
-    active_process: Arc<Mutex<Option<claude::ClaudeProcess>>>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         while let Some(event) = rx.recv().await {
+            let is_done = matches!(event, Event::Done);
             let line = event.to_json_line();
             let mut out = io::stdout();
             let _ = out.write_all(line.as_bytes()).await;
             let _ = out.flush().await;
 
-            if matches!(event, Event::Done) {
-                let mut proc = active_process.lock().await;
-                if let Some(ref mut p) = *proc {
-                    let _ = p.wait().await;
-                }
-                *proc = None;
+            if is_done {
                 break;
             }
         }
@@ -35,6 +30,17 @@ fn spawn_event_forwarder(
 
 #[tokio::main]
 async fn main() {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{signal, SignalKind};
+        let mut sigterm = signal(SignalKind::terminate()).expect("failed to register SIGTERM handler");
+        tokio::spawn(async move {
+            loop {
+                sigterm.recv().await;
+            }
+        });
+    }
+
     let session = SessionManager::new();
     let active_process: Arc<Mutex<Option<claude::ClaudeProcess>>> = Arc::new(Mutex::new(None));
     let active_forwarder: Arc<Mutex<Option<JoinHandle<()>>>> = Arc::new(Mutex::new(None));
@@ -79,7 +85,7 @@ async fn main() {
                 match proc_result {
                     Ok(process) => {
                         *active_process.lock().await = Some(process);
-                        let handle = spawn_event_forwarder(rx, active_process.clone());
+                        let handle = spawn_event_forwarder(rx);
                         *active_forwarder.lock().await = Some(handle);
                     }
                     Err(e) => {
@@ -121,7 +127,7 @@ async fn main() {
                 match proc_result {
                     Ok(process) => {
                         *active_process.lock().await = Some(process);
-                        let handle = spawn_event_forwarder(rx, active_process.clone());
+                        let handle = spawn_event_forwarder(rx);
                         *active_forwarder.lock().await = Some(handle);
                     }
                     Err(e) => {
@@ -133,6 +139,14 @@ async fn main() {
             }
 
             Request::Continue(params) => {
+                {
+                    let mut proc = active_process.lock().await;
+                    if let Some(ref mut p) = *proc {
+                        let _ = p.abort().await;
+                    }
+                    *proc = None;
+                }
+
                 let sid = session.get_session_id().await;
                 if let Some(session_id) = sid {
                     let chat_params = protocol::ChatParams {
@@ -157,7 +171,7 @@ async fn main() {
                     match proc_result {
                         Ok(process) => {
                             *active_process.lock().await = Some(process);
-                            let handle = spawn_event_forwarder(rx, active_process.clone());
+                            let handle = spawn_event_forwarder(rx);
                             *active_forwarder.lock().await = Some(handle);
                         }
                         Err(e) => {

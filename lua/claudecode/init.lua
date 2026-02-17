@@ -26,7 +26,7 @@ M.config = {
   },
   model = nil,
   allowed_tools = nil,
-  append_system_prompt = nil,
+  append_system_prompt = "Your edits are displayed as inline diffs in the user's Neovim editor. The user will accept or reject each edit using keyboard shortcuts. You do not need to ask for write permissions. Make one edit per file at a time and wait for the result before making another edit to the same file.",
   permission_mode = "acceptEdits",
   binary_path = nil,
 }
@@ -82,6 +82,12 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("ClaudeNew", function()
     require("claudecode.chat").new_session()
   end, { desc = "Start new Claude session" })
+
+  vim.api.nvim_create_autocmd("VimLeavePre", {
+    callback = function()
+      require("claudecode.bridge").stop()
+    end,
+  })
 end
 
 return M
