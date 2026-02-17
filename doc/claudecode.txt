@@ -13,8 +13,10 @@ CONTENTS						*claudecode-contents*
     4. Configuration ........................ |claudecode-configuration|
     5. Commands ............................. |claudecode-commands|
     6. Keymaps .............................. |claudecode-keymaps|
-    7. API .................................. |claudecode-api|
-    8. Troubleshooting ...................... |claudecode-troubleshooting|
+    7. Statusline ........................... |claudecode-statusline|
+    8. Highlight Groups ..................... |claudecode-highlights|
+    9. API .................................. |claudecode-api|
+    10. Troubleshooting ..................... |claudecode-troubleshooting|
 
 ==============================================================================
 1. INTRODUCTION					*claudecode-introduction*
@@ -27,17 +29,57 @@ No API key required. This plugin runs through the Claude Code CLI, which
 uses your existing Claude Pro or Max subscription. Unlike API-based plugins,
 there are no per-token costs or separate billing — just your monthly plan.
 
+Features:
+
+- In-editor chat (split or floating window) with markdown rendering
+- Inline diff viewer — accept or reject edits per-hunk
+- Inline edit — select code, type an instruction, Claude edits in-place
+- Code context — send the current file, visual selection, or diagnostics
+- Session management — resume previous conversations or start new ones
+- Statusline integration with animated spinner and state-based colors
+- Cost display — token usage and cost shown after each response
+- Non-blocking — a lightweight Rust bridge keeps your editor responsive
+
 ==============================================================================
 2. REQUIREMENTS					*claudecode-requirements*
 
 - Neovim 0.10+
 - Claude CLI (`claude` on your PATH)
 - Rust toolchain (only if no prebuilt binary is available for your platform)
+- lualine.nvim (optional, recommended for live statusline updates)
 
 ==============================================================================
 3. INSTALLATION					*claudecode-installation*
 
-With lazy.nvim: >lua
+With lazy.nvim (with lualine): >lua
+    {
+      "douglasjordan2/claudecode.nvim",
+      build = function()
+        require("claudecode.build").install()
+      end,
+      dependencies = {
+        {
+          "nvim-lualine/lualine.nvim",
+          dependencies = { "nvim-tree/nvim-web-devicons" },
+          config = function()
+            require("lualine").setup({
+              sections = {
+                lualine_x = {
+                  "claudecode",
+                  "encoding", "fileformat", "filetype",
+                },
+              },
+            })
+          end,
+        },
+      },
+      config = function()
+        require("claudecode").setup()
+      end,
+    }
+<
+
+With lazy.nvim (without lualine): >lua
     {
       "douglasjordan2/claudecode.nvim",
       build = function()
@@ -65,6 +107,48 @@ With packer.nvim: >lua
 4. CONFIGURATION				*claudecode-configuration*
 
 Call `require("claudecode").setup(opts)` with a table of options.
+All options shown below with their defaults: >lua
+    require("claudecode").setup({
+      ui = {
+        mode = "split",
+        split_width = 80,
+        float_width = 0.7,
+        float_height = 0.8,
+        border = "rounded",
+        input_min_height = 2,
+        input_max_height = 10,
+      },
+      keymaps = {
+        toggle = "<leader>cc",
+        send = "<leader>cs",
+        context = "<leader>cx",
+        visual = "<leader>cv",
+        inline_edit = "<leader>ce",
+        abort = "<leader>ca",
+        accept_diff = "<leader>cy",
+        reject_diff = "<leader>cn",
+        sessions = "<leader>cl",
+      },
+      statusline = {
+        icons = {
+          idle = "󰚩",
+          thinking = "󱜸",
+          streaming = "󰊳",
+          tool_use = "󰒓",
+          error = "󰅚",
+        },
+      },
+      truncation = {
+        tool_result = 120,
+        command = 60,
+      },
+      model = nil,
+      allowed_tools = nil,
+      append_system_prompt = "Your edits are displayed ...",
+      permission_mode = "acceptEdits",
+      binary_path = nil,
+    })
+<
 
 						*claudecode-config-ui*
 ui.mode ~
@@ -86,7 +170,8 @@ ui.input_min_height ~
     Minimum height of the input box. Default: `2`
 
 ui.input_max_height ~
-    Maximum height of the input box. Default: `10`
+    Maximum height of the input box. The input area auto-resizes as you
+    type, up to this limit. Default: `10`
 
 						*claudecode-config-keymaps*
 keymaps.toggle ~
@@ -101,6 +186,11 @@ keymaps.context ~
 keymaps.visual ~
     Send visual selection. Default: `<leader>cv`
 
+keymaps.inline_edit ~
+    Inline edit selection. Select code in visual mode and press this to
+    type an edit instruction. Claude will apply the change using the Edit
+    tool and show the result as an inline diff. Default: `<leader>ce`
+
 keymaps.abort ~
     Abort request. Default: `<leader>ca`
 
@@ -113,28 +203,52 @@ keymaps.reject_diff ~
 keymaps.sessions ~
     Session picker. Default: `<leader>cl`
 
+						*claudecode-config-statusline*
+statusline.icons ~
+    Table of icons for each state. Defaults: >lua
+        {
+          idle = "󰚩",
+          thinking = "󱜸",
+          streaming = "󰊳",
+          tool_use = "󰒓",
+          error = "󰅚",
+        }
+<
+    These icons are used by both the built-in `statusline()` function and
+    the lualine component. Override any or all to match your preference.
+
 						*claudecode-config-truncation*
 truncation.tool_result ~
-    Max display length for tool results. Default: `120`
+    Max display length for tool results in the chat buffer.
+    Default: `120`
 
 truncation.command ~
-    Max display length for commands. Default: `60`
+    Max display length for commands in the chat buffer. Default: `60`
 
 						*claudecode-config-other*
 model ~
-    Override Claude model. Default: `nil`
+    Override Claude model. Default: `nil` (uses CLI default)
 
 allowed_tools ~
-    Restrict available tools. Default: `nil`
+    Restrict available tools. Default: `nil` (all tools available)
 
 append_system_prompt ~
-    Append to system prompt. Default: `nil`
+    Additional text appended to Claude's system prompt. The default
+    instructs Claude to make one edit per file at a time and wait for
+    the result, since edits are displayed as inline diffs.
+    Default: `"Your edits are displayed as inline diffs in the user's`
+    `Neovim editor. The user will accept or reject each edit using`
+    `keyboard shortcuts. You do not need to ask for write permissions.`
+    `Make one edit per file at a time and wait for the result before`
+    `making another edit to the same file."`
 
 permission_mode ~
-    Permission mode for claude CLI. Default: `nil`
+    Permission mode for the claude CLI. Default: `"acceptEdits"`
 
 binary_path ~
-    Custom path to bridge binary. Default: `nil`
+    Custom path to bridge binary. When nil, the plugin searches for the
+    binary in standard locations (prebuilt platform binary, then
+    rust/target/release/). Default: `nil`
 
 ==============================================================================
 5. COMMANDS					*claudecode-commands*
@@ -178,20 +292,96 @@ Global keymaps (normal mode):
 Visual mode:
 
     `<leader>cv`    Send selection to Claude
+    `<leader>ce`    Inline edit selection
+
+When using `<leader>cv` or `<leader>ce`, the selected lines remain
+highlighted while the prompt input is open, so you can see exactly what
+you selected.
 
 Chat input buffer:
 
+    `<CR>`          Send message (insert and normal mode)
     `<C-s>`         Send message (insert mode)
-    `<CR>`          Send message (normal mode)
+    `<S-CR>`        Insert a newline without sending (insert mode)
     `q`             Close chat (normal mode)
+
+Note: In insert mode `<CR>` sends the message rather than inserting a
+newline. Use `<S-CR>` to add newlines to multi-line messages.
 
 Diff viewer:
 
     `<leader>cy`    Accept proposed edit
     `<leader>cn`    Reject proposed edit
 
+These keymaps are set on the buffer containing the diff and are removed
+after accepting or rejecting. Files with pending diffs cannot be saved
+until the diff is accepted or rejected.
+
 ==============================================================================
-7. API						*claudecode-api*
+7. STATUSLINE					*claudecode-statusline*
+
+						*claudecode-statusline-lualine*
+Lualine component ~
+
+Add the `"claudecode"` component to your lualine config: >lua
+    lualine_x = { "claudecode", "encoding", "fileformat", "filetype" }
+<
+
+The lualine component provides:
+- Animated braille spinner while Claude is active
+- Color-coded state using your colorscheme's diagnostic highlights:
+  - Yellow (DiagnosticWarn) for thinking
+  - Green (DiagnosticOk) for streaming
+  - Blue (DiagnosticInfo) for tool_use
+  - Red (DiagnosticError) for error
+  - Comment highlight for idle
+- Auto-refresh during active states for smooth animation
+
+						*claudecode-statusline-custom*
+Custom statusline ~
+
+For any statusline, use the built-in function: >lua
+    vim.o.statusline = "%{v:lua.require('claudecode').statusline()}"
+<
+
+The `statusline()` function returns a string with an icon and state
+label (e.g. "󰚩 Claude" when idle, "󱜸 Claude [thinking]" when active).
+Customize icons via `statusline.icons` in config.
+
+						*claudecode-statusline-states*
+States ~
+
+Claude cycles through these states during a request:
+
+    `idle`        No active request
+    `thinking`    Request sent, waiting for first response
+    `streaming`   Receiving text from Claude
+    `tool_use`    Claude is using a tool (Edit, Bash, etc.)
+    `error`       An error occurred
+
+==============================================================================
+8. HIGHLIGHT GROUPS				*claudecode-highlights*
+
+The following highlight groups are used by the inline diff viewer and can
+be customized with |:highlight|:
+
+ClaudeCodeDiffAdd ~
+    Added lines in the inline diff. Default: links to |hl-DiffAdd|
+
+ClaudeCodeDiffDelete ~
+    Deleted lines in the inline diff. Default: links to |hl-DiffDelete|
+
+ClaudeCodeDiffHint ~
+    The "[<key>] Accept  [<key>] Reject" hint text shown at the end of
+    the first changed line. Default: links to |hl-Comment|
+
+Example customization: >vim
+    highlight ClaudeCodeDiffAdd guibg=#1a3a1a
+    highlight ClaudeCodeDiffDelete guibg=#3a1a1a
+<
+
+==============================================================================
+9. API						*claudecode-api*
 
 						*claudecode.setup()*
 require("claudecode").setup({opts})
@@ -201,52 +391,165 @@ require("claudecode").setup({opts})
 require("claudecode").config
     The active configuration table (read-only after setup).
 
-require("claudecode.chat").send({prompt}, {context})
-    Send a prompt with optional context string.
+						*claudecode.get_state()*
+require("claudecode").get_state()
+    Returns the current state string: "idle", "thinking", "streaming",
+    "tool_use", or "error".
 
+						*claudecode.statusline()*
+require("claudecode").statusline()
+    Returns a formatted statusline string with icon and state label.
+    Suitable for use in 'statusline' or any custom statusline.
+
+CHAT ~
+						*claudecode.chat.send()*
+require("claudecode.chat").send({prompt}, {context})
+    Send a prompt with optional context string. Opens the chat window
+    if not already open. Starts the bridge if not running. If a session
+    is active, continues it; otherwise starts a new one.
+
+						*claudecode.chat.abort()*
 require("claudecode.chat").abort()
     Abort the active request.
 
+						*claudecode.chat.new_session()*
 require("claudecode.chat").new_session()
-    Start a new session.
+    Start a new session (clears session ID, keeps chat history visible).
 
+						*claudecode.chat.end_session()*
+require("claudecode.chat").end_session()
+    End the current session and clear the chat buffer contents.
+
+						*claudecode.chat.resume()*
 require("claudecode.chat").resume({session_id})
-    Resume a previous session.
+    Resume a previous session by its ID.
 
+						*claudecode.chat.continue_chat()*
+require("claudecode.chat").continue_chat({prompt})
+    Send a follow-up prompt to the current session. Unlike `send()`,
+    this does not open the UI or start the bridge — it requires an
+    active session.
+
+						*claudecode.chat.get_state()*
+require("claudecode.chat").get_state()
+    Returns the current chat state string.
+
+						*claudecode.chat.get_session_history()*
+require("claudecode.chat").get_session_history()
+    Returns a list of session history entries. Each entry has:
+    - `id`: The session ID from the claude CLI
+    - `summary`: First 80 characters of the initial prompt
+    - `timestamp`: Unix timestamp of when the session was created
+
+CONTEXT ~
+						*claudecode.context.current_file()*
 require("claudecode.context").current_file()
-    Returns the current file as a formatted context string.
+    Returns the current file as a formatted context string with path,
+    filetype, and full contents in a fenced code block.
 
+						*claudecode.context.selection()*
 require("claudecode.context").selection()
-    Returns the visual selection as a formatted context string.
+    Returns the visual selection as a formatted context string with
+    file path, line range, and selected code.
 
+						*claudecode.context.diagnostics()*
 require("claudecode.context").diagnostics()
-    Returns buffer diagnostics as a formatted context string.
+    Returns buffer diagnostics as a formatted context string listing
+    each diagnostic with severity and line number.
 
+						*claudecode.context.gather()*
 require("claudecode.context").gather({file}, {selection}, {diagnostics})
-    Gathers multiple context types into one string.
+    Gathers multiple context types into one string. Each argument is a
+    boolean. Returns nil if no context is available.
 
+UI ~
+						*claudecode.ui.open()*
 require("claudecode.ui").open({mode})
-    Open the chat UI. Mode is `"split"` or `"float"`.
+    Open the chat UI. Mode is `"split"` or `"float"`. Defaults to the
+    configured `ui.mode`.
 
+						*claudecode.ui.close()*
 require("claudecode.ui").close()
-    Close the chat UI.
+    Close the chat UI (both chat and input windows).
 
+						*claudecode.ui.toggle()*
 require("claudecode.ui").toggle()
     Toggle the chat UI.
 
-require("claudecode.bridge").start({opts})
-    Start the bridge process.
+						*claudecode.ui.focus_input()*
+require("claudecode.ui").focus_input()
+    Focus the input buffer and enter insert mode. Opens the chat UI
+    first if it is not already open.
 
+						*claudecode.ui.is_open()*
+require("claudecode.ui").is_open()
+    Returns true if the chat window is currently open.
+
+						*claudecode.ui.get_chat_buf()*
+require("claudecode.ui").get_chat_buf()
+    Returns the chat buffer number, creating it if needed.
+
+						*claudecode.ui.get_chat_win()*
+require("claudecode.ui").get_chat_win()
+    Returns the chat window ID, or nil if not open.
+
+BRIDGE ~
+						*claudecode.bridge.start()*
+require("claudecode.bridge").start({opts})
+    Start the bridge process. The opts table may include `binary_path`.
+
+						*claudecode.bridge.stop()*
 require("claudecode.bridge").stop()
     Stop the bridge process.
 
+						*claudecode.bridge.is_running()*
 require("claudecode.bridge").is_running()
     Returns true if the bridge is running.
 
-==============================================================================
-8. TROUBLESHOOTING				*claudecode-troubleshooting*
+						*claudecode.bridge.send()*
+require("claudecode.bridge").send({request})
+    Send a JSON-lines request to the bridge. The request table is
+    JSON-encoded and sent via stdin. Returns true on success.
 
-Run `:checkhealth claudecode` to diagnose common issues.
+						*claudecode.bridge.on_event()*
+require("claudecode.bridge").on_event({callback})
+    Register a callback for bridge events. The callback receives a
+    decoded JSON table with an `event` field. Events: "init",
+    "text_chunk", "text", "tool_use", "tool_result", "cost", "done",
+    "error", "status".
+
+INLINE EDIT ~
+						*claudecode.inline_edit.request()*
+require("claudecode.inline_edit").request({instruction}, {selection_info})
+    Request an inline edit. The selection_info table should contain:
+    - `file_path`: Absolute path to the file
+    - `start_line`: Start line number of the selection
+    - `end_line`: End line number of the selection
+    - `filetype`: Filetype of the buffer
+    - `code`: The selected code as a string
+
+DIFF ~
+						*claudecode.diff.show()*
+require("claudecode.diff").show({tool_use_id}, {input})
+    Show an inline diff for an Edit tool use. The input table should
+    contain `file_path`, `old_string`, and `new_string`. Displays
+    deleted lines with |ClaudeCodeDiffDelete| highlighting and added
+    lines as virtual text with |ClaudeCodeDiffAdd| highlighting.
+
+						*claudecode.diff.accept()*
+require("claudecode.diff").accept({tool_use_id})
+    Accept a pending diff, applying the modified content to the buffer.
+
+						*claudecode.diff.reject()*
+require("claudecode.diff").reject({tool_use_id})
+    Reject a pending diff, restoring the original content.
+
+==============================================================================
+10. TROUBLESHOOTING				*claudecode-troubleshooting*
+
+Run `:checkhealth claudecode` to diagnose common issues. The health
+check verifies: Neovim version, claude CLI availability, bridge binary
+presence, ANTHROPIC_API_KEY status, and bridge process state.
 
 Bridge binary not found ~
     Run `:lua require('claudecode.build').install()` or build manually:
@@ -258,6 +561,16 @@ claude not on PATH ~
 No output after sending ~
     Check `:ClaudeStatus` to verify the bridge is running. Stderr output
     from the CLI is forwarded as error events in the chat buffer.
+
+Cannot save file ~
+    If a file has a pending inline diff, you must accept (`<leader>cy`)
+    or reject (`<leader>cn`) it before the file can be saved.
+
+Chat panel keeps reopening ~
+    The chat panel is designed to be closed with the toggle keymap
+    (`<leader>cc` by default). Closing individual chat or input windows
+    via `:q` or `<C-w>c` will reopen the panel — use the toggle keymap
+    instead.
 
 ==============================================================================
 vim:tw=78:ts=8:ft=help:norl:
