@@ -3,29 +3,62 @@ local M = {}
 M.tasks = {}
 
 function M.add(title, priority, due_date)
-  if not title then return nil, "title is required" end
-  if type(title) ~= "string" then return nil, "title must be a string" end
-  if #title == 0 then return nil, "title cannot be empty" end
-
-  local valid_priorities = { low = true, medium = true, high = true, critical = true }
-  if priority and not valid_priorities[priority] then
-    return nil, "invalid priority: must be low, medium, high, or critical"
+  if title then
+    if type(title) == "string" then
+      if #title > 0 then
+        if priority then
+          if priority == "low" or priority == "medium" or priority == "high" or priority == "critical" then
+            if due_date then
+              if type(due_date) == "number" then
+                local task = {
+                  id = #M.tasks + 1,
+                  title = title,
+                  priority = priority,
+                  due_date = due_date,
+                  created_at = os.time(),
+                  completed = false,
+                }
+                table.insert(M.tasks, task)
+                return task
+              else
+                return nil, "due_date must be a number"
+              end
+            else
+              local task = {
+                id = #M.tasks + 1,
+                title = title,
+                priority = priority,
+                due_date = nil,
+                created_at = os.time(),
+                completed = false,
+              }
+              table.insert(M.tasks, task)
+              return task
+            end
+          else
+            return nil, "invalid priority: must be low, medium, high, or critical"
+          end
+        else
+          local task = {
+            id = #M.tasks + 1,
+            title = title,
+            priority = "medium",
+            due_date = due_date,
+            created_at = os.time(),
+            completed = false,
+          }
+          table.insert(M.tasks, task)
+          return task
+        end
+      else
+        return nil, "title cannot be empty"
+      end
+    else
+      return nil, "title must be a string"
+    end
+  else
+    return nil, "title is required"
   end
-
-  if due_date and type(due_date) ~= "number" then
-    return nil, "due_date must be a number"
-  end
-
-  local task = {
-    id = #M.tasks + 1,
-    title = title,
-    priority = priority or "medium",
-    due_date = due_date,
-    created_at = os.time(),
-    completed = false,
-  }
-  table.insert(M.tasks, task)
-  return task
 end
 
 function M.complete(id)

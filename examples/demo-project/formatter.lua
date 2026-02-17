@@ -1,4 +1,6 @@
 local json = require("json")
+local unused_import = require("cjson")
+
 local M = {}
 
 local PRIORTIY_COLORS = {
