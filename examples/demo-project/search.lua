@@ -18,10 +18,8 @@ end
 function M.find_by_date_range(tasks, start_date, end_date)
   local results = {}
   for _, task in ipairs(tasks) do
-    if task.due_date then
-      if task.due_date >= start_date and task.due_date <= end_date then
-        table.insert(results, task)
-      end
+    if task.due_date and task.due_date >= start_date and task.due_date <= end_date then
+      table.insert(results, task)
     end
   end
   return results

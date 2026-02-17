@@ -46,11 +46,11 @@ The `add()` function is deliberately deeply nested (6 levels) — an obvious ref
 Select code and ask Claude about it specifically.
 
 1. Open `search.lua`
-2. Visually select lines 10-23: `10GV23G`
+2. Visually select the `find()` function: `3GV16G`
 3. Press `<leader>cv`
-4. Type: `This is doing string search manually. Why not use string.find()?`
+4. Type: `This uses numeric indexing. Would ipairs be better here?`
 
-The `find()` function has a hand-rolled substring search that's a clear candidate for `string.find()`.
+The `find()` function uses `for i = 1, #tasks` with manual indexing instead of `ipairs`.
 
 ---
 
@@ -82,7 +82,42 @@ Sessions are scoped to the current Neovim instance.
 
 ---
 
-## 6. Float Mode
+## 6. Inline Edit
+
+Select code, type an instruction, and Claude edits it in-place — no chat panel needed.
+
+1. Open `search.lua`
+2. Visually select the `find_by_date_range()` function: `18GV28G`
+3. Press `<leader>ce`
+4. The selection stays highlighted and a prompt appears: `Edit instruction>`
+5. Type: `Combine the nested if statements into a single condition`
+6. Claude sends an Edit — the inline diff viewer shows the proposed change
+7. Press `<leader>cy` to accept or `<leader>cn` to reject
+
+This is the Cursor Cmd+K equivalent — targeted edits without opening the chat.
+
+---
+
+## 7. Statusline
+
+See Claude's current state in your statusline.
+
+1. Add to your lualine config:
+   ```lua
+   lualine_x = { require("claudecode").statusline }
+   ```
+2. Restart Neovim — you'll see `󰚩 Claude` in the statusline (idle)
+3. Send a message with `<leader>cc` — watch the icon change:
+   - `󱜸 Claude [thinking]` — waiting for first response
+   - `󰊳 Claude [streaming]` — text is streaming in
+   - `󰒓 Claude [tool_use]` — Claude is using a tool
+   - `󰚩 Claude` — back to idle when done
+
+You can also check the raw state programmatically: `:lua print(require("claudecode").get_state())`
+
+---
+
+## 8. Float Mode
 
 For users who prefer an overlay instead of a split.
 

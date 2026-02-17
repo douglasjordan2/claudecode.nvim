@@ -32,6 +32,9 @@ Use Claude as an AI pair programmer directly inside Neovim. Chat, send code sele
 - **Inline diff viewer** — Claude proposes edits, you accept or reject per-hunk, just like Cursor
 
   ![Inline diff viewer](screenshots/inline-diff.png)
+- **Inline edit** — select code, type an instruction, Claude edits it in-place (Cursor's Cmd+K)
+
+  ![Inline edit prompt](screenshots/inline-edit.png)
 - **Code context** — send the current file, a visual selection, or diagnostics as context
 
   ![Visual selection context](screenshots/visual-selection.png)
@@ -40,6 +43,11 @@ Use Claude as an AI pair programmer directly inside Neovim. Chat, send code sele
 - **Session management** — resume previous conversations, start new ones
 
   ![Session picker](screenshots/session-picker.png)
+- **Statusline** — see Claude's state (idle/thinking/streaming/tool_use) in lualine or any statusline
+
+  ![Statusline during inline edit](screenshots/statusline.png)
+
+  ![Statusline during chat](screenshots/statusline-split.png)
 - **Non-blocking** — a lightweight Rust bridge keeps your editor responsive while Claude thinks
 - **Zero config billing** — uses your Claude Pro/Max subscription through the official CLI
 
@@ -48,10 +56,41 @@ Use Claude as an AI pair programmer directly inside Neovim. Chat, send code sele
 - Neovim 0.10+
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) (`claude` must be on your PATH)
 - Rust toolchain (only if no prebuilt binary is available for your platform)
+- [lualine.nvim](https://github.com/nvim-lualine/lualine.nvim) (optional, recommended for live statusline updates)
 
 ## Installation
 
 ### lazy.nvim
+
+```lua
+{
+  "douglasjordan2/claudecode.nvim",
+  build = function()
+    require("claudecode.build").install()
+  end,
+  dependencies = {
+    {
+      "nvim-lualine/lualine.nvim",
+      dependencies = { "nvim-tree/nvim-web-devicons" },
+      config = function()
+        require("lualine").setup({
+          sections = {
+            lualine_x = {
+              require("claudecode").statusline,
+              "encoding", "fileformat", "filetype",
+            },
+          },
+        })
+      end,
+    },
+  },
+  config = function()
+    require("claudecode").setup()
+  end,
+}
+```
+
+Without lualine (statusline function still works with any statusline):
 
 ```lua
 {
@@ -114,10 +153,20 @@ require("claudecode").setup({
     send = "<leader>cs",      -- focus input
     context = "<leader>cx",   -- send with file context
     visual = "<leader>cv",    -- send visual selection
+    inline_edit = "<leader>ce", -- inline edit selection
     abort = "<leader>ca",     -- abort current request
     accept_diff = "<leader>cy", -- accept diff in diff viewer
     reject_diff = "<leader>cn", -- reject diff in diff viewer
     sessions = "<leader>cl",  -- list/resume sessions
+  },
+  statusline = {
+    icons = {
+      idle = "󰚩",
+      thinking = "󱜸",
+      streaming = "󰊳",
+      tool_use = "󰒓",
+      error = "󰅚",
+    },
   },
   truncation = {
     tool_result = 120,        -- max length for tool result display
@@ -159,6 +208,7 @@ require("claudecode").setup({
 | Key              | Action                     |
 |------------------|----------------------------|
 | `<leader>cv`     | Send selection to Claude   |
+| `<leader>ce`     | Inline edit selection       |
 
 ### Chat input buffer
 
@@ -174,6 +224,24 @@ require("claudecode").setup({
 |------------------|----------------------------|
 | `<leader>cy`     | Accept proposed edit       |
 | `<leader>cn`     | Reject proposed edit       |
+
+## Statusline
+
+Add Claude's state to your statusline. Works with lualine or any custom statusline.
+
+### lualine
+
+```lua
+lualine_x = { require("claudecode").statusline }
+```
+
+### Custom statusline
+
+```lua
+vim.o.statusline = "%{v:lua.require('claudecode').statusline()}"
+```
+
+Shows the current state with a nerd font icon: idle, thinking, streaming, tool_use, or error. Customize icons via `statusline.icons` in config.
 
 ## How It Works
 

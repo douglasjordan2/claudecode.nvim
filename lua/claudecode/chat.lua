@@ -9,6 +9,7 @@ local stream_line = nil
 local current_session_id = nil
 local session_history = {}
 local pending_prompt = nil
+local claude_state = "idle"
 
 local function get_buf()
   return ui.get_chat_buf()
@@ -61,6 +62,7 @@ local function on_event(data)
   local evt = data.event
 
   if evt == "init" then
+    claude_state = "thinking"
     current_session_id = data.session_id
     if current_session_id and pending_prompt then
       local summary = pending_prompt:gsub("\n", " ")
@@ -83,6 +85,7 @@ local function on_event(data)
     end
 
   elseif evt == "text_chunk" then
+    claude_state = "streaming"
     if not streaming then
       streaming = true
       local b = get_buf()
@@ -99,6 +102,7 @@ local function on_event(data)
     stream_line = nil
 
   elseif evt == "tool_use" then
+    claude_state = "tool_use"
     local tool = data.tool or "?"
     local summary = tool
     if data.input then
@@ -146,11 +150,13 @@ local function on_event(data)
     })
 
   elseif evt == "done" then
+    claude_state = "idle"
     streaming = false
     stream_line = nil
     append_to_chat({ "", "---", "" })
 
   elseif evt == "error" then
+    claude_state = "error"
     streaming = false
     stream_line = nil
     local msg = data.message or "Unknown error"
@@ -251,9 +257,14 @@ end
 
 function M.abort()
   bridge.send({ method = "abort" })
+  claude_state = "idle"
   streaming = false
   stream_line = nil
   append_to_chat({ "", "[Aborted]", "" })
+end
+
+function M.get_state()
+  return claude_state
 end
 
 return M

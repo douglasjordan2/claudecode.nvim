@@ -47,6 +47,40 @@ function M.setup(config)
     end)
   end, { desc = "Claude: Send selection" })
 
+  local sel_ns_edit = vim.api.nvim_create_namespace("claudecode_inline_edit_sel")
+
+  vim.keymap.set("v", km.inline_edit, function()
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "nx", false)
+    local bufnr = vim.api.nvim_get_current_buf()
+    local file_path = vim.api.nvim_buf_get_name(bufnr)
+    local ft = vim.bo[bufnr].filetype
+
+    local start_line = vim.fn.getpos("'<")[2]
+    local end_line = vim.fn.getpos("'>")[2]
+    local lines = vim.api.nvim_buf_get_lines(bufnr, start_line - 1, end_line, false)
+    local code = table.concat(lines, "\n")
+
+    for row = start_line - 1, end_line - 1 do
+      vim.api.nvim_buf_set_extmark(bufnr, sel_ns_edit, row, 0, {
+        line_hl_group = "Visual",
+        end_row = row + 1,
+      })
+    end
+
+    vim.ui.input({ prompt = "Edit instruction> " }, function(input)
+      vim.api.nvim_buf_clear_namespace(bufnr, sel_ns_edit, 0, -1)
+      if input and input ~= "" then
+        require("claudecode.inline_edit").request(input, {
+          file_path = file_path,
+          start_line = start_line,
+          end_line = end_line,
+          filetype = ft,
+          code = code,
+        })
+      end
+    end)
+  end, { desc = "Claude: Inline edit selection" })
+
   vim.keymap.set("n", km.abort, function()
     chat.abort()
   end, { desc = "Claude: Abort" })

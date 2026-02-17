@@ -19,10 +19,20 @@ M.config = {
     send = "<leader>cs",
     context = "<leader>cx",
     visual = "<leader>cv",
+    inline_edit = "<leader>ce",
     abort = "<leader>ca",
     accept_diff = "<leader>cy",
     reject_diff = "<leader>cn",
     sessions = "<leader>cl",
+  },
+  statusline = {
+    icons = {
+      idle = "󰚩",
+      thinking = "󱜸",
+      streaming = "󰊳",
+      tool_use = "󰒓",
+      error = "󰅚",
+    },
   },
   model = nil,
   allowed_tools = nil,
@@ -88,6 +98,18 @@ function M.setup(opts)
       require("claudecode.bridge").stop()
     end,
   })
+end
+
+function M.get_state()
+  return require("claudecode.chat").get_state()
+end
+
+function M.statusline()
+  local state = M.get_state()
+  local icons = M.config.statusline.icons
+  local icon = icons[state] or icons.idle
+  local label = state == "idle" and "Claude" or "Claude [" .. state .. "]"
+  return icon .. " " .. label
 end
 
 return M
