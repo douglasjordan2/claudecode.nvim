@@ -259,7 +259,9 @@ function M.accept(tool_use_id)
 
   vim.bo[diff.bufnr].modifiable = true
   vim.api.nvim_buf_set_lines(diff.bufnr, 0, -1, false, diff.modified_lines)
+  vim.fn.writefile(diff.modified_lines, diff.file_path)
   vim.bo[diff.bufnr].modified = false
+  vim.cmd("checktime " .. diff.bufnr)
 
   pending_diffs[tool_use_id] = nil
 

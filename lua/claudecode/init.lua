@@ -36,7 +36,7 @@ M.config = {
   },
   model = nil,
   allowed_tools = nil,
-  append_system_prompt = "Your edits are displayed as inline diffs in the user's Neovim editor. The user will accept or reject each edit using keyboard shortcuts. You do not need to ask for write permissions. Make one edit per file at a time and wait for the result before making another edit to the same file.",
+  append_system_prompt = "Your edits are displayed as inline diffs in the user's Neovim editor. The user will accept or reject each edit using keyboard shortcuts. You do not need to ask for write permissions. Always use the Edit tool instead of the Write tool for modifying existing files so changes appear as inline diffs. Make one edit per file at a time and wait for the result before making another edit to the same file.",
   permission_mode = "acceptEdits",
   binary_path = nil,
 }
