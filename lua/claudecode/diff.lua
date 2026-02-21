@@ -153,8 +153,18 @@ function M.show(tool_use_id, input)
 
   setup_highlights()
 
+  local function ensure_editor_win()
+    if ui.is_ui_win(vim.api.nvim_get_current_win()) then
+      local win = ui.find_editor_win()
+      if win then
+        vim.api.nvim_set_current_win(win)
+      end
+    end
+  end
+
   local bufnr = vim.fn.bufnr(file_path)
   if bufnr == -1 then
+    ensure_editor_win()
     vim.cmd("edit " .. vim.fn.fnameescape(file_path))
     bufnr = vim.api.nvim_get_current_buf()
   else
@@ -162,6 +172,7 @@ function M.show(tool_use_id, input)
     if #wins > 0 then
       vim.api.nvim_set_current_win(wins[1])
     else
+      ensure_editor_win()
       vim.cmd("edit " .. vim.fn.fnameescape(file_path))
     end
   end
@@ -266,6 +277,13 @@ function M.accept(tool_use_id)
   pending_diffs[tool_use_id] = nil
 
   vim.notify("[claudecode] Accepted edit to " .. diff.file_path)
+
+  vim.schedule(function()
+    local ui = require("claudecode.ui")
+    if ui.is_open() then
+      ui.focus_input()
+    end
+  end)
 end
 
 function M.reject(tool_use_id)
@@ -288,6 +306,13 @@ function M.reject(tool_use_id)
   pending_diffs[tool_use_id] = nil
 
   vim.notify("[claudecode] Rejected edit to " .. diff.file_path)
+
+  vim.schedule(function()
+    local ui = require("claudecode.ui")
+    if ui.is_open() then
+      ui.focus_input()
+    end
+  end)
 end
 
 return M

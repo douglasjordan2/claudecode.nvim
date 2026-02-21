@@ -110,6 +110,27 @@ function M.get_chat_win()
   return chat_win
 end
 
+function M.get_input_win()
+  return input_win
+end
+
+function M.is_ui_win(win)
+  return win == chat_win or win == input_win
+end
+
+function M.find_editor_win()
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if vim.api.nvim_win_is_valid(win) and not M.is_ui_win(win) then
+      local buf = vim.api.nvim_win_get_buf(win)
+      local bt = vim.bo[buf].buftype
+      if bt == "" or bt == nil then
+        return win
+      end
+    end
+  end
+  return nil
+end
+
 local function apply_win_opts(win)
   vim.wo[win].number = false
   vim.wo[win].relativenumber = false
