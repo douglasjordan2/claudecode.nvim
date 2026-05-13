@@ -1,13 +1,15 @@
 # claudecode.nvim
 
-**Cursor-like AI coding in Neovim — powered by your Claude Code subscription.**
+**Cursor-like AI coding in Neovim — powered by the official Claude Code CLI.**
 
-Use Claude as an AI pair programmer directly inside Neovim. Chat, send code selections, review inline diffs, and let Claude edit your files — all without leaving your editor. No API key needed, no per-token billing, fully ToS-compliant.
+Use Claude as an AI pair programmer directly inside Neovim. Chat, send code selections, review inline diffs, and let Claude edit your files — all without leaving your editor.
 
-> If you have a [Claude Pro or Max](https://claude.ai/pricing) subscription with
-> [Claude Code](https://docs.anthropic.com/en/docs/claude-code) enabled, you
-> already have everything you need. This plugin talks to the official `claude` CLI —
-> the same way Claude Code works in VS Code and JetBrains.
+> This plugin talks to the official `claude` CLI in headless mode (`claude -p`) —
+> the same binary that powers Claude Code in VS Code and JetBrains. Bring your own
+> auth: an Anthropic API key, or any provider the CLI supports (Bedrock, Vertex).
+> Headless / SDK usage is billed separately from interactive Claude Code Pro/Max
+> sessions, so check [Anthropic's pricing](https://docs.anthropic.com/en/docs/claude-code/costs)
+> before heavy use.
 
 ![Chat split mode — code on the left, Claude on the right](screenshots/chat-split.png)
 
@@ -22,7 +24,6 @@ Use Claude as an AI pair programmer directly inside Neovim. Chat, send code sele
 | Session persistence | No | Yes | Yes | **Yes** |
 | ToS-compliant | Yes | Yes | Yes | **Yes** |
 | Works in your terminal | No | No | No | **Yes** |
-| **Uses your existing Claude plan?** | **No** | **No** | **No** | **YES** |
 | **NOT VS Code?** | **No** | **No** | **No** | **YES** |
 
 > **A note on doing things the right way:** claudecode.nvim uses the official `claude`
@@ -54,7 +55,7 @@ Use Claude as an AI pair programmer directly inside Neovim. Chat, send code sele
 
   ![Statusline during chat](screenshots/statusline-split.png)
 - **Non-blocking** — a lightweight Rust bridge keeps your editor responsive while Claude thinks
-- **Zero config billing** — uses your Claude Pro/Max subscription through the official CLI
+- **Official CLI** — no scraping, no reverse-engineering; uses the same `claude` binary as the VS Code and JetBrains extensions
 
 ## Requirements
 
